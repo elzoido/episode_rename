@@ -70,12 +70,12 @@ my $seriescache;
 SERIES: for my $file (@ARGV) {
      my ($base, $filename) = ($file =~ m!^(.*?)([^/]*)$!);
      
-     my ($series, $season, $episode, $suffix) =
-	 ($filename =~ /^(.*?)s?(\d?\d)[-xe]?(\d\d).*\.(.{2,4}?)$/i);
+     my ($series, $season, $episode, $multiepisode, $suffix) =
+	 ($filename =~ /^(.*?)s?(\d?\d)[-xe]?(\d\d)(?:[-xe]?(\d\d)?).*\.(.{2,4}?)$/i);
      
      if (defined $opt{'s'}) {
-	 ($season, $episode, $suffix) = 
-	     ($filename =~ /s?(\d?\d)[-xe]?(\d\d).*\.(.{2,4}?)$/i);
+	 ($season, $episode, $multiepisode, $suffix) = 
+	     ($filename =~ /s?(\d?\d)[-xe]?(\d\d)(?:[-xe]?(\d\d)?).*\.(.{2,4}?)$/i);
 	 $series = $opt{'s'};
      }
 
@@ -93,8 +93,9 @@ SERIES: for my $file (@ARGV) {
      $season =~ s/^0*//;
 
      $episode = '0'.$episode if (length($episode)==1);
+     $multiepisode = '0'.$multiepisode if (length($multiepisode)==1);
      
-     next unless ($suffix =~ /avi|mpe?g|rm|ogm|mkv|mp3|wav/i);
+     next unless ($suffix =~ /avi|mpe?g|rm|ogm|mkv|mp[34]|wav/i);
 
      my %newtitles;
      my %seriesids;
@@ -140,8 +141,19 @@ SERIES: for my $file (@ARGV) {
      my $newfilename = $renamepattern;
      $newfilename =~ s/<SHOW>/$showparsed->{Series}->{SeriesName}/g;
      $newfilename =~ s/<SEASON>/$season/g;
-     $newfilename =~ s/<EPISODE>/$episode/g;
-     $newfilename =~ s/<TITLE>/$fileinfoparsed->{Episode}->{EpisodeName}/g;
+     if ($multiepisode) {
+	my $episodes = $episode . '-' . $multiepisode;
+	$newfilename =~ s/<EPISODE>/$episodes/g;
+
+     	my $multiinfo = get("$mirror/api/$apikey/series/".$seriescache->{$series}."/default/$season/".($multiepisode+0)."/$language.xml");
+        my $multiinfoparsed = $parser->XMLin($multiinfo);
+
+	$newfilename =~ s/<TITLE>/$fileinfoparsed->{Episode}->{EpisodeName} - $multiinfoparsed->{Episode}->{EpisodeName}/g;
+	
+     } else {
+	$newfilename =~ s/<EPISODE>/$episode/g;
+	$newfilename =~ s/<TITLE>/$fileinfoparsed->{Episode}->{EpisodeName}/g;
+     }
      $newfilename =~ s!["*/:<>?\\|]!!g;
 
      $newfilename =~ s/\s\s+/ /g;
