@@ -44,17 +44,17 @@ The preferred use-case is a directory with files from one show only. Execute `ep
 
 == Known Bugs ==
 
-Due to the loose way, the filenames are parsed, the script probably will fail, when there's a year written in the filename before the season/episode. For instance the file 'Batman.1966.S01E01.avi' will not be parsed correctly. Unfortunately, the only workaround is to remove the year first (On debian-based system the tool `rename` should do the trick easily).
+Due to the loose way, the filenames are parsed, the script may (but shouldn't) fail, when there's a year written in the filename before the season/episode.
 
-Multi-Episodes will at the moment not be handled correctly (the resulting file will be named as if it was only the first part).
+Multi-Episodes will only be handled correctly if the filename contains something like S01E02E03.
 
-Due to the likely increased complexity at parsing the filenames, those problems will likely not be resolved by me, however I would be glad to accept patches as long as they don't break existing behaviour.
+Due to the likely increased complexity at parsing the filenames, there may be other subtle bugs.
 
 Using mirrors of http://thetvdb.com/ is not yet supported as there aren't any at the moment :)
 
 == Release-Informations ==
 
-The current version is 0.9 (since 2009-05-24). This is the first public release after a major rewrite to use the great database at http://thetvdb.com/.
+The current version is 0.9b (since 2012-09-24). This is the first public release after a major rewrite to use the great database at http://thetvdb.com/.
 
 == Legalese ==
 
