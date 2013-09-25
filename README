@@ -35,6 +35,7 @@ Default: en
 Default: <SHOW> - <SEASON>x<EPISODE> - <TITLE>
 -n Don't strip filenames of characters not allowed in a FAT filesystem.
 -y Don't ask for normal renaming, assume yes
+-e Omit file extension
 
 == Usage hints ==
 
