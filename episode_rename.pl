@@ -8,7 +8,7 @@ use XML::Simple;
 use LWP::Simple;
 
 my %opt;
-getopts( 'vynchs:l:p:', \%opt );
+getopts( 'vynechs:l:p:', \%opt );
 
 if ( defined $opt{'h'} ) {
     print << 'EOF';
@@ -30,6 +30,7 @@ episode_rename.pl -options [<file1> <file2>]
 -n            Don't strip filenames of characters hazardous to FAT. Not recommended.
 -y            Don't ask for normal renaming, assume yes
 -v            Script is verbose and will tell what it's renaming.
+-e            Omit file extension
 EOF
 
 }
@@ -201,7 +202,11 @@ SERIES: for my $file (@ARGV) {
 
     $newfilename =~ s/\s\s+/ /g;
     $newfilename =~ s/^\s+|\s+$//g;
-    $newfilename .= '.' . lc($suffix);
+
+    # omit file extension
+    unless ($opt{'e'}) {
+	    $newfilename .= '.' . lc($suffix);
+    }
 
     my $normal = 0;
 
@@ -213,7 +218,7 @@ SERIES: for my $file (@ARGV) {
         print "CAUTION: Destination file '$newfilename' already exists! Overwrite? [yN]\n";
     }
     else {
-        print "Rename '$filename' to '$newfilename'? [yN]\n" unless ( $opt{y} );
+	print "Rename '$filename' to '$newfilename'? [yN]\n" unless ( $opt{y} );
         $normal = 1;
     }
 
