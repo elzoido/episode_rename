@@ -8,7 +8,7 @@ use XML::Simple;
 use LWP::Simple;
 
 my %opt;
-getopts( 'vynechs:l:p:', \%opt );
+getopts( 'vynechi:s:l:p:', \%opt );
 
 if ( defined $opt{'h'} ) {
     print << 'EOF';
@@ -21,6 +21,7 @@ episode_rename.pl -options [<file1> <file2>]
 
 -h            This help.
 -s <series>   Supply show and don\'t try to guess it from filename
+-i <seriesid> Force seriesid from http://www.thetvdb.com/
 -l <language> Supply language (\'-l help\' for list of available languages
               Default: en (english)
 -c            Give me <=10 choices for each show
@@ -42,9 +43,11 @@ my $mirror        = 'http://thetvdb.com/';
 my $parser        = new XML::Simple;
 my $language      = 'en';
 my $renamepattern = '<SHOW> - <SEASON>x<EPISODE> - <TITLE>';
+my $seriesid      = '';
 
 $renamepattern = $opt{p} if ( defined $opt{p} );
 $language      = $opt{l} if ( defined $opt{l} );
+$seriesid      = $opt{i} if ( defined $opt{i} );
 
 # Select random mirror
 # Disable for now (no mirrors exist!)
@@ -116,6 +119,9 @@ SERIES: for my $file (@ARGV) {
     my %seriesids;
     my $newseries;
     my %seriescnt;
+	if ($seriesid) {
+		$seriescache->{$series} = $seriesid;
+	}
     unless ( exists $seriescache->{$series} ) {
         my $getseries =
           get("$mirror/api/GetSeries.php?seriesname=$series&lang=$language");
@@ -159,7 +165,7 @@ SERIES: for my $file (@ARGV) {
             # Take first result
             my ($firstid) = ( $getseries =~ /<seriesid>(\d+)<\/seriesid>/ );
             if ($firstid) {
-                $seriescache->{$series} = $firstid;
+				$seriescache->{$series} = $firstid;
             }
             else {
                 die "$mirror returned no results for show '$series' (File: $filename)\n";
