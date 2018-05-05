@@ -4,8 +4,10 @@ use warnings;
 use strict;
 
 use Getopt::Std;
-use XML::Simple;
-use LWP::Simple;
+#use XML::Simple;
+#use LWP::Simple::Post qw/post/;
+use REST::Client;
+use JSON qw/encode_json decode_json/;
 
 my %opt;
 getopts( 'vynechi:s:l:p:', \%opt );
@@ -39,8 +41,7 @@ EOF
 my $verbose = defined( $opt{v} ? 1 : 0 );
 
 my $apikey        = '8F6EF4AE2A36435E';
-my $mirror        = 'http://thetvdb.com/';
-my $parser        = new XML::Simple;
+my $mirror        = 'https://api.thetvdb.com';
 my $language      = 'en';
 my $renamepattern = '<SHOW> - <SEASON>x<EPISODE> - <TITLE>';
 my $seriesid      = '';
@@ -49,29 +50,32 @@ $renamepattern = $opt{p} if ( defined $opt{p} );
 $language      = $opt{l} if ( defined $opt{l} );
 $seriesid      = $opt{i} if ( defined $opt{i} );
 
-# Select random mirror
-# Disable for now (no mirrors exist!)
-#{
-#	my $mirrorfile = get("$mirror/api/$apikey/mirrors.xml");
-#	die "Couldn't retrieve mirror-file. Bailing out.\n" unless defined $mirrorfile;
-#	my $mirrorsparsed = $parser->XMLin($mirrorfile);
-#	my @suitablemirrors;
-#	for ($mirrorsparsed) {
-#
-#	}
-#}
+my $header;
+$header->{'Content-Type'} = 'application/json';
+$header->{'Accept'} = 'application/json';
 
+# login
+my $client = REST::Client->new();
+$client->POST("$mirror/login", encode_json({"apikey" => $apikey}),$header);
+if ($client->responseCode() != 200) {
+    die 'Failed login (response code ' . $client->responseCode() . ')';
+}
+my $token = decode_json($client->responseContent())->{token};
+$header->{'Authorization'} = 'Bearer ' . $token;
 if ( exists $opt{l} and $opt{l} eq 'help' ) {
-    my $langfile = get("$mirror/api/$apikey/languages.xml");
-    die "Couldn't retrieve language-file. Bailing out.\n"
-      unless defined $langfile;
-    my $langparsed = $parser->XMLin($langfile);
+    $client->GET("$mirror/languages", $header);
+    if ($client->responseCode() != 200) {
+        die 'Failed getting languages (response code ' . $client->responseCode() . ')';
+    }
+    my $languages = decode_json($client->responseContent());
     print "Possible languages:\n";
-    for ( keys %{ $langparsed->{Language} } ) {
-        print $langparsed->{Language}->{$_}->{abbreviation} . ' - ' . $_ . "\n";
+    for ( @{$languages->{data}} ) {
+        print $_->{abbreviation} . ' - ' . $_->{englishName} . "\n";
     }
     exit;
 }
+
+$header->{'Accept-Language'} = $language;
 
 my $seriescache;
 
@@ -107,6 +111,7 @@ SERIES: for my $file (@ARGV) {
     $series =~ s/^\s*//g;
     $series =~ s/\s*$//g;
     $series = lc($series);
+    $series =~ s/ /\%20/g;
 
     $season =~ s/^0*//;
 
@@ -123,86 +128,77 @@ SERIES: for my $file (@ARGV) {
 		$seriescache->{$series} = $seriesid;
 	}
     unless ( exists $seriescache->{$series} ) {
-        my $getseries =
-          get("$mirror/api/GetSeries.php?seriesname=$series&lang=$language");
-        my $seriesparsed = $parser->XMLin($getseries);
-        if ( defined $opt{'c'} ) {
+        $client->GET("$mirror/search/series?name=$series", $header);
+        if ($client->responseCode() != 200) {
+            die 'Failed getting series (response code ' . $client->responseCode() . ')';
+        }
+        my $getseries = decode_json($client->responseContent());
+        if ( defined $opt{'c'} and scalar(@{$getseries->{data}}) > 1) {
 
-            # Let the user select
-            my ($firstid) = ( $getseries =~ /<seriesid>(\d+)<\/seriesid>/ );    # Sorting purposes
-            if ( !$firstid ) {
-                die "$mirror returned no results for show '$series' (File: $filename)\n";
-            }
             print "Here are the choices for show '$series' (File: $filename):\n";
           SHOW:
-            for (
-                sort {
-                    return -1 if ( $a == $firstid );
-                    return 1  if ( $b == $firstid );
-                    return 0;
-                } keys %{ $seriesparsed->{Series} }
-              )
+            for ( @{$getseries->{data}} )
             {
                 print "\t"
-                  . $seriesparsed->{Series}->{$_}->{SeriesName}
+                  . $_->{seriesName}
                   . " (press y to confirm, i for more info, anything else to skip)\n";
                 my $input;
                 chomp( $input = <STDIN> );
                 if ( $input =~ /^y$/i ) {
-                    $seriescache->{$series} = $_;
+                    $seriescache->{$series} = $_->{id};
                 }
                 elsif ( $input =~ /^i$/i ) {
                     print "\t Overview for "
-                      . $seriesparsed->{Series}->{$_}->{SeriesName} . ":\n";
+                      . $_->{seriesName} . ":\n";
                     print "\t"
-                      . $seriesparsed->{Series}->{$_}->{Overview} . "\n";
+                      . $_->{overview} . "\n";
                     redo SHOW;
                 }
             }
         }
         else {
-
-            # Take first result
-            my ($firstid) = ( $getseries =~ /<seriesid>(\d+)<\/seriesid>/ );
-            if ($firstid) {
-				$seriescache->{$series} = $firstid;
-            }
-            else {
+            if ( scalar(@{$getseries->{data}}) == 0 ) {
                 die "$mirror returned no results for show '$series' (File: $filename)\n";
             }
+            # Take first result
+            $seriescache->{$series} = ( $getseries->{data}->[0]->{id} );
         }
     }
 
     # Actually rename file
-    my $fileinfo =
-      get(  "$mirror/api/$apikey/series/"
-          . $seriescache->{$series}
-          . "/default/$season/"
-          . ( $episode + 0 )
-          . "/$language.xml" );
-    my $fileinfoparsed = $parser->XMLin($fileinfo);
-    my $showinfo =
-      get(  "$mirror/api/$apikey/series/"
-          . $seriescache->{$series}
-          . "/$language.xml" );
-    my $showparsed  = $parser->XMLin($showinfo);
+    $client->GET("$mirror/series/" . $seriescache->{$series} . '/episodes/query?airedSeason=' . $season . '&airedEpisode=' . ($episode + 0), $header);
+    if ($client->responseCode() != 200) {
+        die 'Failed getting episode info (response code ' . $client->responseCode() . ')';
+    }
+
+    my $fileinfo = decode_json($client->responseContent());
+    $client->GET("$mirror/series/".$seriescache->{$series}, $header);
+    if ($client->responseCode() != 200) {
+        die 'Failed getting series info (response code ' . $client->responseCode() . ')';
+    }
+    my $showinfo = decode_json($client->responseContent());
+    
     my $newfilename = $renamepattern;
-    $newfilename =~ s/<SHOW>/$showparsed->{Series}->{SeriesName}/g;
+    $newfilename =~ s/<SHOW>/$showinfo->{data}->{seriesName}/g;
     $newfilename =~ s/<SEASON>/$season/g;
 
-     if ($multiepisode) {
-	my $episodes = $episode . '-' . $multiepisode;
-	$newfilename =~ s/<EPISODE>/$episodes/g;
+    if ($multiepisode) {
+	    my $episodes = $episode . '-' . $multiepisode;
+	    $newfilename =~ s/<EPISODE>/$episodes/g;
 
-     	my $multiinfo = get("$mirror/api/$apikey/series/".$seriescache->{$series}."/default/$season/".($multiepisode+0)."/$language.xml");
-        my $multiinfoparsed = $parser->XMLin($multiinfo);
+        $client->GET("$mirror/series/" . $seriescache->{$series} . '/episodes/query?airedSeason=' . $season . '&airedEpisode=' . ($episode + 0), $header);
+        if ($client->responseCode() != 200) {
+            die 'Failed getting episode info (response code ' . $client->responseCode() . ')';
+        }
 
-	$newfilename =~ s/<TITLE>/$fileinfoparsed->{Episode}->{EpisodeName} - $multiinfoparsed->{Episode}->{EpisodeName}/g;
+     	my $multiinfo = decode_json($client->responseContent());
+
+	    $newfilename =~ s/<TITLE>/$fileinfo->{data}->[0]->{episodeName} - $multiinfo->{data}->[0]->{episodeName}/g;
 	
-     } else {
-	$newfilename =~ s/<EPISODE>/$episode/g;
-	$newfilename =~ s/<TITLE>/$fileinfoparsed->{Episode}->{EpisodeName}/g;
-     }
+    } else {
+	    $newfilename =~ s/<EPISODE>/$episode/g;
+	    $newfilename =~ s/<TITLE>/$fileinfo->{data}->[0]->{episodeName}/g;
+    }
 
     $newfilename =~ s!["*/:<>?\\|]!!g;
 
