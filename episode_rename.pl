@@ -4,8 +4,6 @@ use warnings;
 use strict;
 
 use Getopt::Std;
-#use XML::Simple;
-#use LWP::Simple::Post qw/post/;
 use REST::Client;
 use JSON qw/encode_json decode_json/;
 

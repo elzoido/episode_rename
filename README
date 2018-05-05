@@ -17,8 +17,8 @@ You need a running and working Perl-Installation on preferable a Linux-Box (alth
 Then, make sure, the following Perl-Modules are installed (in braces you'll find the names of the Debian/Ubuntu-Package):
 
 * Getopt::Long (perl-base)
-* LWP::Simple (libwww-perl)
-* XML::Simple (libxml-simple-perl)
+* REST::Client (librest-client-perl)
+* JSON (libjson-perl)
 
 If the requirements are met, download and unpack the Source, make the file executable and put it in your path. You should be good to go.
 
@@ -51,11 +51,9 @@ Multi-Episodes will only be handled correctly if the filename contains something
 
 Due to the likely increased complexity at parsing the filenames, there may be other subtle bugs.
 
-Using mirrors of http://thetvdb.com/ is not yet supported as there aren't any at the moment :)
-
 == Release-Informations ==
 
-The current version is 0.9b (since 2012-09-24). This is the first public release after a major rewrite to use the great database at http://thetvdb.com/.
+The current version is 1.0 (since 2018-05-06). As of this version, it uses the API v2 at https://api.thetvdb.com/.
 
 == Legalese ==
 
