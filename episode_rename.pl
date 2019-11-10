@@ -8,7 +8,7 @@ use REST::Client;
 use JSON qw/encode_json decode_json/;
 
 my %opt;
-getopts( 'vynechi:s:l:p:', \%opt );
+getopts( 'vydnechi:s:l:p:', \%opt );
 
 if ( defined $opt{'h'} ) {
     print << 'EOF';
@@ -30,6 +30,7 @@ episode_rename.pl -options [<file1> <file2>]
               Default: <SHOW> - <SEASON>x<EPISODE> - <TITLE>
 -n            Don't strip filenames of characters hazardous to FAT. Not recommended.
 -y            Don't ask for normal renaming, assume yes
+-d            Use DVD ordering
 -v            Script is verbose and will tell what it's renaming.
 -e            Omit file extension
 EOF
@@ -164,7 +165,9 @@ SERIES: for my $file (@ARGV) {
     }
 
     # Actually rename file
-    $client->GET("$mirror/series/" . $seriescache->{$series} . '/episodes/query?airedSeason=' . $season . '&airedEpisode=' . ($episode + 0), $header);
+    my $search_by = 'aired';
+    $search_by = 'dvd' if (exists $opt{d});
+    $client->GET("$mirror/series/" . $seriescache->{$series} . '/episodes/query?'.$search_by.'Season=' . $season . '&'.$search_by.'Episode=' . ($episode + 0), $header);
     if ($client->responseCode() != 200) {
         die 'Failed getting episode info (response code ' . $client->responseCode() . ')';
     }
@@ -184,7 +187,7 @@ SERIES: for my $file (@ARGV) {
 	    my $episodes = $episode . '-' . $multiepisode;
 	    $newfilename =~ s/<EPISODE>/$episodes/g;
 
-        $client->GET("$mirror/series/" . $seriescache->{$series} . '/episodes/query?airedSeason=' . $season . '&airedEpisode=' . ($episode + 0), $header);
+        $client->GET("$mirror/series/" . $seriescache->{$series} . '/episodes/query?'.$search_by.'Season=' . $season . '&'.$search_by.'Episode=' . ($episode + 0), $header);
         if ($client->responseCode() != 200) {
             die 'Failed getting episode info (response code ' . $client->responseCode() . ')';
         }
