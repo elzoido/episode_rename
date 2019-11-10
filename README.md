@@ -3,7 +3,9 @@
 ## What is episode_rename?
 
 episode_rename... well... renames episodes. Who would have guessed :)
+
 It's a small Perl-Script that parses filenames like 'Desperate.Housewives.S05E22.PROPER.720p.HDTV.x264-CTU.mkv', tries to guess the name of the show, season and episode, looks up the information on http://thetvdb.com and renames the file to, in this case 'Desperate Housewives - 5x22 - Marry Me a Little.mkv'
+
 Batch renaming multiple files, overriding the name of the show, custom rename-patterns and even renaming to the titles in different languages is supported.
 
 ## Where can I get episode_rename?
