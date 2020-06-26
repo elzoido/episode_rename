@@ -194,8 +194,19 @@ SERIES: for my $file (@ARGV) {
         }
 
      	my $multiinfo = decode_json($client->responseContent());
+	my $first = $fileinfo->{data}->[0]->{episodeName};
+	my ($first_name, $first_number) = ($first =~ /(.*)\((?:Part\s)?(\d+)\)/);
+	my $second = $multiinfo->{data}->[0]->{episodeName};
+	my ($second_name, $second_number) = ($second =~ /(.*)\((?:Part\s)?(\d+)\)/);
 
-	    $newfilename =~ s/<TITLE>/$fileinfo->{data}->[0]->{episodeName} - $multiinfo->{data}->[0]->{episodeName}/g;
+	my $print_name = "$first - $second";
+
+	if ($first_name and $first_name eq $second_name) {
+		$print_name = "$first_name ($first_number+$second_number)";
+	} elsif ($first_name and $first_name ne $second_name) {
+		$print_name = "$first_name - $second_name";
+	}
+	    $newfilename =~ s/<TITLE>/$print_name/g;
 	
     } else {
 	    $newfilename =~ s/<EPISODE>/$episode/g;
