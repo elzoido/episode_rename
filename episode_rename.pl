@@ -188,7 +188,7 @@ SERIES: for my $file (@ARGV) {
 	    my $episodes = $episode . '-' . $multiepisode;
 	    $newfilename =~ s/<EPISODE>/$episodes/g;
 
-        $client->GET("$mirror/series/" . $seriescache->{$series} . '/episodes/query?'.$search_by.'Season=' . $season . '&'.$search_by.'Episode=' . ($episode + 0), $header);
+        $client->GET("$mirror/series/" . $seriescache->{$series} . '/episodes/query?'.$search_by.'Season=' . $season . '&'.$search_by.'Episode=' . ($multiepisode + 0), $header);
         if ($client->responseCode() != 200) {
             die 'Failed getting episode info (response code ' . $client->responseCode() . ')';
         }
