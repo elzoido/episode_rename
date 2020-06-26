@@ -101,7 +101,7 @@ SERIES: for my $file (@ARGV) {
     }
 
     next unless $suffix;
-    next if ( ( $season == 0 ) or ( $episode == 0 ) );
+    next if ( $episode == 0 );
 
     # Normalize name of series
     $series =~ s/\.|_/ /g;
@@ -113,6 +113,7 @@ SERIES: for my $file (@ARGV) {
     $series =~ s/ /\%20/g;
 
     $season =~ s/^0*//;
+    $season = '0' unless ($season);
 
     $episode = '0' . $episode if ( length($episode) == 1 );
     $multiepisode = '0' . $multiepisode if ( $multiepisode and length($multiepisode) == 1 );
